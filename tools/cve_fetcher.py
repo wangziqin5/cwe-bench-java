@@ -14,11 +14,13 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+from pathlib import Path
 from typing import Any, Dict
 
 
 API_ROOT = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 DEFAULT_USER_AGENT = "cve-bench-java-tools/1.0"
+DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parent / "cve_outputs"
 
 
 def fetch_cve(cve_id: str, api_key: str | None = None, timeout: int = 30) -> Dict[str, Any]:
@@ -49,7 +51,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--outfile",
         default=None,
-        help="Path to write JSON response. Defaults to stdout if omitted.",
+        help="Path to write JSON response. Overrides --output-dir.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=None,
+        help="Directory to store CVE JSON files (default: tools/cve_outputs).",
     )
     parser.add_argument(
         "--timeout",
@@ -77,12 +85,16 @@ def main() -> int:
         return 1
 
     if args.outfile:
-        with open(args.outfile, "w", encoding="utf-8") as handle:
-            json.dump(result, handle, indent=2)
-        print(f"[cve_fetcher] Wrote data to {args.outfile}")
+        outfile_path = Path(args.outfile)
+        outfile_path.parent.mkdir(parents=True, exist_ok=True)
     else:
-        json.dump(result, sys.stdout, indent=2)
-        sys.stdout.write("\n")
+        output_dir = args.output_dir or DEFAULT_OUTPUT_DIR
+        output_dir.mkdir(parents=True, exist_ok=True)
+        outfile_path = output_dir / f"{args.cve_id}.json"
+
+    with outfile_path.open("w", encoding="utf-8") as handle:
+        json.dump(result, handle, indent=2)
+    print(f"[cve_fetcher] Wrote data to {outfile_path}")
     return 0
 
 
