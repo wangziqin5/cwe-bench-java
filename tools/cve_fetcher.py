@@ -1,7 +1,7 @@
 """
-Fetch CVE metadata from the NVD REST API v2.
+从 NVD REST API v2 获取 CVE 元数据。
 
-Example:
+示例:
     python cve_fetcher.py CVE-2021-12345 --outfile CVE-2021-12345.json
 """
 
@@ -20,11 +20,11 @@ from typing import Any, Dict
 
 API_ROOT = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 DEFAULT_USER_AGENT = "cve-bench-java-tools/1.0"
-DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parent / "cve_outputs"
+DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parent / "cve_info"
 
 
 def fetch_cve(cve_id: str, api_key: str | None = None, timeout: int = 30) -> Dict[str, Any]:
-    """Fetch metadata for a single CVE ID from the NVD REST API."""
+    """从 NVD REST API 获取单个 CVE ID 的元数据。"""
     params = urllib.parse.urlencode({"cveId": cve_id})
     request = urllib.request.Request(f"{API_ROOT}?{params}", method="GET")
     request.add_header("User-Agent", DEFAULT_USER_AGENT)
@@ -41,29 +41,29 @@ def fetch_cve(cve_id: str, api_key: str | None = None, timeout: int = 30) -> Dic
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("cve_id", help="Target CVE identifier, e.g. CVE-2021-12345.")
+    parser.add_argument("cve_id", help="目标 CVE 标识符，例如 CVE-2021-12345。")
     parser.add_argument(
         "--api-key",
         dest="api_key",
         default=None,
-        help="Optional NVD API key (falls back to NVD_API_KEY env var).",
+        help="可选的 NVD API 密钥（回退到 NVD_API_KEY 环境变量）。",
     )
     parser.add_argument(
         "--outfile",
         default=None,
-        help="Path to write JSON response. Overrides --output-dir.",
+        help="写入 JSON 响应的路径。覆盖 --output-dir。",
     )
     parser.add_argument(
         "--output-dir",
         type=Path,
         default=None,
-        help="Directory to store CVE JSON files (default: tools/cve_outputs).",
+        help="存储 CVE JSON 文件的目录 (默认: tools/cve_info)。",
     )
     parser.add_argument(
         "--timeout",
         type=int,
         default=30,
-        help="HTTP timeout in seconds (default: 30).",
+        help="HTTP 超时（秒）(默认: 30)。",
     )
     return parser.parse_args()
 

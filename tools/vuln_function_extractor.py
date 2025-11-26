@@ -1,11 +1,9 @@
 """
-Extract the vulnerable function bodies recorded in data/fix_info.csv.
-Only the required source files are downloaded automatically (no full repo clone).
+提取 data/fix_info.csv 中记录的易受攻击的函数体。
+仅自动下载所需的源文件（无需完整的 repo 克隆）。
 
-Example:
-    python vuln_function_extractor.py \
-        --project apache__camel_CVE-2018-8041_2.20.3 \
-        --output snippets
+示例:
+    python vuln_function_extractor.py CVE-2018-8041
 """
 
 from __future__ import annotations
@@ -24,7 +22,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 FIX_INFO_PATH = REPO_ROOT / "data" / "fix_info.csv"
 PROJECT_INFO_PATH = REPO_ROOT / "data" / "project_info.csv"
 DEFAULT_CACHE_ROOT = REPO_ROOT / ".cache" / "vuln_sources"
-DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parent / "vuln_snippets"
+DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parent / "vuln_code"
 RAW_GITHUB_BASE = "https://raw.githubusercontent.com"
 
 
@@ -41,6 +39,7 @@ class FixEntry:
 @dataclass
 class ProjectInfo:
     project_slug: str
+    cve_id: str
     github_username: str
     github_repository_name: str
     buggy_commit_id: str
@@ -137,6 +136,7 @@ def load_project_info() -> None:
         for row in reader:
             PROJECT_INFO_MAP[row["project_slug"]] = ProjectInfo(
                 project_slug=row["project_slug"],
+                cve_id=row["cve_id"],
                 github_username=row["github_username"],
                 github_repository_name=row["github_repository_name"],
                 buggy_commit_id=row["buggy_commit_id"],
@@ -149,6 +149,14 @@ def get_project_info(project_slug: str) -> ProjectInfo:
     if not project_info:
         raise ValueError(f"Project '{project_slug}' not found in project_info.csv")
     return project_info
+
+
+def get_projects_by_cve(cve_id: str) -> List[ProjectInfo]:
+    load_project_info()
+    results = [p for p in PROJECT_INFO_MAP.values() if p.cve_id == cve_id]
+    if not results:
+        raise ValueError(f"No projects found for CVE ID '{cve_id}' in project_info.csv")
+    return results
 
 
 def download_source_file(
@@ -192,13 +200,13 @@ def resolve_source_file(
 ) -> Path:
     project_info = get_project_info(project_slug)
 
-    # Prefer user-provided sources_root if the file exists there.
+    # 如果文件存在于用户提供的 sources_root 中，则优先使用。
     if sources_root:
         candidate = sources_root / project_slug / relative_path
         if candidate.exists():
             return candidate
 
-    # Fallback to cached version (download if necessary).
+    # 回退到缓存版本（如有必要则下载）。
     cached_file = cache_root / project_slug / project_info.buggy_commit_id / relative_path
     if cached_file.exists():
         return cached_file
@@ -248,36 +256,35 @@ def dump_snippets(
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--project",
-        required=True,
-        help="Project slug to extract (see data/project_info.csv).",
+        "cve_id",
+        help="目标 CVE 标识符，例如 CVE-2021-12345。",
     )
     parser.add_argument(
         "--fix-info",
         type=Path,
         default=FIX_INFO_PATH,
-        help="Path to fix_info.csv (default: data/fix_info.csv).",
+        help="fix_info.csv 的路径 (默认: data/fix_info.csv)。",
     )
     parser.add_argument(
         "--sources-root",
         type=Path,
         default=None,
-        help="Base directory containing project-sources/<project_slug>. "
-        "If omitted, files are fetched individually from GitHub.",
+        help="包含 project-sources/<project_slug> 的基本目录。 "
+        "如果省略，文件将从 GitHub 单独获取。",
     )
     parser.add_argument(
         "--cache-root",
         type=Path,
         default=DEFAULT_CACHE_ROOT,
-        help="Directory to cache downloaded source files "
-        "(default: .cache/vuln_sources).",
+        help="缓存下载的源文件的目录 "
+        "(默认: .cache/vuln_sources)。",
     )
     parser.add_argument(
         "--output",
         type=Path,
         default=DEFAULT_OUTPUT_DIR,
-        help="Directory to save snippets (default: tools/vuln_snippets). "
-        "Set to '-' to print to stdout.",
+        help="保存代码片段的目录 (默认: tools/vuln_code)。 "
+        "设置为 '-' 以打印到标准输出。",
     )
     return parser.parse_args()
 
@@ -289,19 +296,24 @@ def main() -> int:
         output_dir = None
     else:
         output_dir = args.output
-    
+
     try:
-        entries = load_entries(args.project, args.fix_info)
+        projects = get_projects_by_cve(args.cve_id)
     except ValueError as exc:
         print(f"[extractor] {exc}", file=sys.stderr)
         return 1
 
-    try:
-        dump_snippets(entries, args.sources_root, args.cache_root, output_dir)
-    except (FileNotFoundError, ValueError, ConnectionError) as exc:
-        print(f"[extractor] {exc}", file=sys.stderr)
-        return 1
-    return 0
+    success = True
+    for project in projects:
+        print(f"[extractor] Processing project: {project.project_slug}")
+        try:
+            entries = load_entries(project.project_slug, args.fix_info)
+            dump_snippets(entries, args.sources_root, args.cache_root, output_dir)
+        except (ValueError, FileNotFoundError, ConnectionError) as exc:
+            print(f"[extractor] Error processing {project.project_slug}: {exc}", file=sys.stderr)
+            success = False
+
+    return 0 if success else 1
 
 
 if __name__ == "__main__":
