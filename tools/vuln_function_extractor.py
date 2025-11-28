@@ -21,7 +21,7 @@ from typing import Dict, Iterable, List, Optional
 REPO_ROOT = Path(__file__).resolve().parents[1]
 FIX_INFO_PATH = REPO_ROOT / "data" / "fix_info.csv"
 PROJECT_INFO_PATH = REPO_ROOT / "data" / "project_info.csv"
-DEFAULT_CACHE_ROOT = REPO_ROOT / ".cache" / "vuln_sources"
+DEFAULT_CACHE_ROOT = Path(__file__).resolve().parent / "cache"
 DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parent / "vuln_code"
 RAW_GITHUB_BASE = "https://raw.githubusercontent.com"
 
@@ -277,7 +277,7 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=DEFAULT_CACHE_ROOT,
         help="缓存下载的源文件的目录 "
-        "(默认: .cache/vuln_sources)。",
+        "(默认: tools/cache)。",
     )
     parser.add_argument(
         "--output",

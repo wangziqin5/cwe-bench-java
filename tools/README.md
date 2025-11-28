@@ -36,7 +36,7 @@ python cve_fetcher.py CVE-2021-12345 --api-key <YOUR_API_KEY>
   - 自动将 CVE ID 映射到项目标识符 (project slugs)。
   - 自动仅获取每个代码片段所需的文件。
   - 默认将代码片段存储在 `tools/vuln_code/<project_slug>/...` 下；传递 `--output <dir>` 以覆盖或 `--output -` 以打印到标准输出。
-  - 可选的缓存目录（`--cache-root`，默认为 `.cache/vuln_sources`）。
+  - 可选的缓存目录（`--cache-root`，默认为 `tools/cache`）。
   - 当缺少方法范围时回退到类范围。
   - 支持将代码片段转储到文件或打印到标准输出。
   - 专为在 Windows 上运行而设计（无需仅限 Unix 的工具）。
