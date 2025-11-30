@@ -242,10 +242,13 @@ def extract_snippet_data(source_file: Path, entry: FixEntry) -> Optional[Dict[st
         entry.end_line
     )
     
+    match_type = "regex"
+    
     if method_range is None:
         # 尝试使用提供的行号范围
         if entry.start_line > 0 and entry.end_line > 0 and entry.end_line <= len(lines):
              method_range = (entry.start_line, entry.end_line)
+             match_type = "fix_info_fallback"
         else:
             print(f"[extractor] Warning: Could not locate method '{entry.method}' in {entry.file_path}", file=sys.stderr)
             return None
@@ -262,7 +265,8 @@ def extract_snippet_data(source_file: Path, entry: FixEntry) -> Optional[Dict[st
         "end_line": end_line,
         "code": snippet,
         "project_slug": entry.project_slug,
-        "fix_commit_id": entry.fix_commit_id
+        "fix_commit_id": entry.fix_commit_id,
+        "loc_source": match_type
     }
 
 

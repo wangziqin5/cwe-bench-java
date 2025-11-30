@@ -62,7 +62,8 @@ python cve_fetcher.py CVE-2018-8041 --output-dir my_cve_data
           "method_name": "extractAttachmentsFromMultipart",
           "code": "protected void extractAttachmentsFromMultipart(...) { ... }",
           "start_line": 305,
-          "end_line": 342
+          "end_line": 342,
+          "loc_source": "regex" // "regex" (精确匹配) 或 "fix_info_fallback" (回退行号)
         },
         {
            "...": "..." 
